@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Mini Survivor — Single-File HTML</title>
+<style>
+  :root {
+    --ui: #111a;
+    --card: #1a1f26f2;
+    --text: #eef2f8;
+    --accent: #72e0a8;
+    --bad: #ff6b6b;
+  }
+  html, body { margin:0; height:100%; background:#0d0f12; color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+  canvas { display:block; width:100vw; height:100vh; image-rendering: pixelated; }
+  .hud {
+    position:fixed; left:0; right:0; top:0; padding:8px 10px; display:flex; gap:12px; align-items:center; background:var(--ui); backdrop-filter: blur(6px);
+    font-weight:600; letter-spacing:.2px; user-select:none;
+  }
+  .chip { padding:4px 8px; background:#222a; border:1px solid #2b3440; border-radius:8px; }
+  .xpbar { position:fixed; left:10px; right:10px; bottom:10px; height:10px; border-radius:10px; background:#263142; overflow:hidden; border:1px solid #2b3440; }
+  .xpfill { height:100%; background:linear-gradient(90deg, #59c, #8cf); width:0%; }
+  .overlay {
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#0009; backdrop-filter: blur(4px);
+  }
+  .overlay.show { display:flex; }
+  .cardwrap { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; width:min(900px, 92vw); }
+  .card {
+    background:var(--card); border:1px solid #2b3440; border-radius:12px; padding:14px; cursor:pointer; transition:.08s transform, .08s filter, .08s border-color;
+  }
+  .card:hover { transform: translateY(-2px); filter:brightness(1.05); border-color:#3a4656; }
+  .card h3 { margin:0 0 4px; font-size:16px; color:var(--accent); }
+  .card p { margin:0; opacity:.85; font-size:13px; line-height:1.35; }
+  .title { text-align:center; margin:0 0 12px; font-size:20px; }
+  .sub { text-align:center; margin:0 0 18px; opacity:.8; }
+  .centerbtns { display:flex; gap:10px; justify-content:center; margin-top:12px; }
+  .btn {
+    background:#202733; border:1px solid #2b3440; color:var(--text); padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700;
+  }
+  .btn:hover { filter:brightness(1.1); }
+  .log {
+    position:fixed; right:8px; bottom:28px; width:min(360px, 80vw); max-height:38vh; overflow:auto; font-size:12px; background:#0b0f1580; padding:8px; border:1px solid #273142; border-radius:8px;
+  }
+  .tiny { font-size:11px; opacity:.75; }
+</style>
+</head>
+<body>
+<canvas id="game" width="960" height="540"></canvas>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="chip">⏱ <span id="time">00:00</span></div>
+  <div class="chip">❤️ <span id="hp">100 / 100</span></div>
+  <div class="chip">⚔️ DPS <span id="dps">0</span></div>
+  <div class="chip">⭐ Lv <span id="lvl">1</span></div>
+  <div class="chip">🧲 <span id="mgn">24</span></div>
+  <div class="chip">👾 <span id="kills">0</span></div>
+</div>
+<div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+
+<!-- Start / Game Over -->
+<div id="startOverlay" class="overlay show">
+  <div style="width:min(880px, 94vw);background:var(--card);border:1px solid #2b3440;border-radius:16px;padding:20px;">
+    <h2 class="title">Mini Survivor</h2>
+    <p class="sub">WASD / Arrow keys to move. Weapons auto-fire. Collect blue gems, level up, and choose upgrades. Avoid zombies, bats, and slimes.</p>
+    <div class="cardwrap" style="margin-bottom:8px">
+      <div class="card"><h3>Implements (VS-like):</h3><p>Auto weapons (Magic Wand, Knife, Garlic aura, Bible orbit), XP gems & level ups with 3 choices, passives (Move, Cooldown, Magnet, Max HP, Might), chests (rare), pickups (Chicken heal, Magnet), waves scaling over time, timer, DPS tracker, simple pixel art.</p></div>
+      <div class="card"><h3>Monsters:</h3><p>Zombies (slow, sturdy), Bats (fast, brittle, swarm), Slimes (bouncy, chunky). More spawn as time passes.</p></div>
+      <div class="card"><h3>Tips:</h3><p>Keep moving, grab gems with magnet, stack cooldown and damage. Garlic helps early; Bible keeps space.</p></div>
+    </div>
+    <div class="centerbtns">
+      <button class="btn" id="btnStart">Start</button>
+    </div>
+    <p class="tiny" style="text-align:center;margin-top:8px">Single-file HTML. No external assets. Image-rendering: pixelated.</p>
+  </div>
+</div>
+
+<div id="levelOverlay" class="overlay">
+  <div style="width:min(900px, 94vw);">
+    <div style="background:var(--card); border:1px solid #2b3440; border-radius:16px; padding:18px;">
+      <h2 class="title">LEVEL UP!</h2>
+      <p class="sub">Choose one</p>
+      <div id="choices" class="cardwrap"></div>
+    </div>
+  </div>
+</div>
+
+<div id="gameOverOverlay" class="overlay">
+  <div style="width:min(540px, 92vw);background:var(--card);border:1px solid #2b3440;border-radius:16px;padding:20px;text-align:center;">
+    <h2 class="title">Game Over</h2>
+    <p class="sub">You were overwhelmed…</p>
+    <div class="centerbtns">
+      <button class="btn" id="btnRetry">Retry</button>
+      <button class="btn" id="btnQuit" onclick="location.reload()">Quit</button>
+    </div>
+    <div id="finalStats" style="margin-top:12px;font-size:14px;opacity:.9"></div>
+  </div>
+</div>
+
+<div class="log" id="log" aria-hidden="true"></div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const hud = {
+    time: document.getElementById('time'),
+    hp: document.getElementById('hp'),
+    lvl: document.getElementById('lvl'),
+    xpfill: document.getElementById('xpfill'),
+    dps: document.getElementById('dps'),
+    mgn: document.getElementById('mgn'),
+    kills: document.getElementById('kills'),
+  };
+  const startOverlay = document.getElementById('startOverlay');
+  const levelOverlay = document.getElementById('levelOverlay');
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const choicesEl = document.getElementById('choices');
+  const btnStart = document.getElementById('btnStart');
+  const btnRetry = document.getElementById('btnRetry');
+  const finalStats = document.getElementById('finalStats');
+  const logEl = document.getElementById('log');
+
+  // ---------- Utilities ----------
+  const TAU = Math.PI*2;
+  const rand = (a=1,b=0)=>Math.random()*(b-a)+a;
+  const randi = (a,b)=>Math.floor(rand(a,b));
+  const clamp=(v,mi,ma)=>v<mi?mi:(v>ma?ma:v);
+  const dist2=(a,b)=>{const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy;}
+  const choose = (arr)=>arr[randi(0,arr.length)];
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=(Math.random()* (i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+  const now=()=>performance.now();
+
+  // ---------- Input ----------
+  const keys = new Set();
+  window.addEventListener('keydown', e=>{ keys.add(e.key.toLowerCase()); if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault(); });
+  window.addEventListener('keyup', e=>{ keys.delete(e.key.toLowerCase()); });
+
+  // ---------- Pixel Sprites (8x8) ----------
+  // Use characters: . transparent, 1..9 palette indices
+  const PALETTES = {
+    player: ['','#f2d5b3','#3aa','#173','#fff','#8cf','#59c','#a73','#222'],
+    zombie: ['','#3b5','#283','#162','#9c8','#696','#2a2','#0f0','#000'],
+    bat:    ['','#444','#666','#222','#000','#aaa','#c33','#f55','#fff'],
+    slime:  ['','#2ad','#39f','#0b6','#073','#79f','#0ff','#004','#fff'],
+    proj:   ['','#ffb703','#fb8500','#ffd166','#fff','#e63946','#457b9d','#00d1b2','#2a9d8f'],
+    map:    ['','#1a1f26','#18202a','#15222e','#203346','#2a4057','#1c2732','#0e141b','#080b10'],
+  };
+
+  const SPRITES = {
+    player: [
+      "........",
+      "..66....",
+      ".6..6...",
+      ".1551...",
+      "..11....",
+      ".55.5...",
+      ".55.5...",
+      "..77....",
+    ],
+    zombie: [
+      "..22....",
+      ".2332...",
+      ".2442...",
+      "..22....",
+      ".6..6...",
+      ".6..6...",
+      ".6..6...",
+      "..66....",
+    ],
+    bat: [
+      "3..44..3",
+      ".344443.",
+      "34444443",
+      ".344443.",
+      "..3..3..",
+      ".3....3.",
+      "3......3",
+      "........",
+    ],
+    slime: [
+      "........",
+      ".333333.",
+      "36666663",
+      "36....63",
+      "36.66.63",
+      "36....63",
+      ".366663.",
+      "..3333..",
+    ],
+    wandProj: [
+      "..5.....",
+      ".155....",
+      "115551..",
+      ".155....",
+      "..5.....",
+      "........",
+      "........",
+      "........",
+    ],
+    knifeProj: [
+      "777777..",
+      "777777..",
+      "........",
+      "........",
+      "........",
+      "........",
+      "........",
+      "........",
+    ],
+    bible: [
+      ".77..77.",
+      "77777777",
+      "77.77.77",
+      "77777777",
+      "77777777",
+      "77.77.77",
+      "77777777",
+      ".77..77.",
+    ],
+    gemBlue: [
+      "........",
+      "..4664..",
+      ".466664.",
+      "46666664",
+      ".466664.",
+      "..4664..",
+      "...44...",
+      "........",
+    ],
+    chest: [
+      "........",
+      ".888888.",
+      "87777778",
+      "87....78",
+      "87.99.78",
+      "87....78",
+      "87777778",
+      ".888888.",
+    ],
+    chicken: [
+      "..5.....",
+      ".555....",
+      "55555...",
+      ".5855...",
+      ".555....",
+      "..55....",
+      "...55...",
+      "........",
+    ],
+    magnet: [
+      ".77..77.",
+      "7..77..7",
+      "7.7.7..7",
+      "7.....77",
+      "7.....77",
+      "7.7.7..7",
+      "7..77..7",
+      ".77..77.",
+    ],
+  };
+
+  function drawSprite(spriteKey, x, y, scale, paletteName, rot=0) {
+    const s = SPRITES[spriteKey]; if (!s) return;
+    const pal = PALETTES[paletteName] || PALETTES.player;
+    const size = s.length;
+    const hs = (size*scale)/2;
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    if (rot) ctx.rotate(rot);
+    ctx.translate(-hs, -hs);
+    for (let j=0;j<size;j++){
+      const row=s[j];
+      for (let i=0;i<size;i++){
+        const ch=row[i];
+        if(ch==='.'||ch==='0') continue;
+        const col = pal[+ch] || pal[1];
+        ctx.fillStyle=col;
+        ctx.fillRect(i*scale|0, j*scale|0, scale, scale);
+      }
+    }
+    ctx.restore();
+  }
+
+  // ---------- Game State ----------
+  const G = {
+    running:false,
+    camera:{x:0,y:0},
+    elapsed:0, // seconds
+    lastTime:0,
+    dpsTrack:[],
+    entities:[],
+    enemies:[],
+    projs:[],
+    orbits:[],
+    gems:[],
+    pickups:[],
+    effects:[],
+    kills:0,
+    difficulty:1,
+    rngSeed: 1337 + (Math.random()*99999)|0,
+  };
+
+  function seedRand(seed){ // simple LCG for deterministic map tiles
+    let s = seed>>>0;
+    return () => (s = (s*1664525 + 1013904223)>>>0)/4294967296;
+  }
+  const mapRand = seedRand(G.rngSeed);
+
+  // Player
+  const P = {
+    x:0,y:0, r:12, speed:115, vx:0, vy:0,
+    hp:100, maxHp:100, iframes:0, level:1, xp:0, xpTo:10,
+    magnet:24, might:1, cdr:0, moveBonus:1, luck:0,
+    weapons:{}, passives:{},
+  };
+
+  // ---------- Systems ----------
+  function resetGame() {
+    G.running=false;
+    G.elapsed=0; G.lastTime=now(); G.kills=0; G.difficulty=1;
+    G.entities.length=0; G.enemies.length=0; G.projs.length=0; G.gems.length=0; G.effects.length=0; G.pickups.length=0; G.orbits.length=0;
+    P.x=0; P.y=0; P.r=12; P.speed=115; P.vx=0; P.vy=0;
+    P.hp=100; P.maxHp=100; P.iframes=0; P.level=1; P.xp=0; P.xpTo=10;
+    P.magnet=24; P.might=1; P.cdr=0; P.moveBonus=1; P.luck=0;
+    P.weapons={}; P.passives={};
+    grantWeapon('Magic Wand'); // starter
+    addLog("Starter weapon: Magic Wand");
+    updateHUD();
+    render(0,true);
+  }
+
+  function addLog(t) {
+    const line = document.createElement('div');
+    line.textContent = t;
+    logEl.prepend(line);
+    const max=30; while(logEl.childElementCount>max) logEl.removeChild(logEl.lastChild);
+  }
+
+  function updateHUD() {
+    hud.hp.textContent = `${Math.ceil(P.hp)} / ${P.maxHp}`;
+    hud.lvl.textContent = P.level;
+    hud.xpfill.style.width = `${Math.min(100, (P.xp/P.xpTo)*100)}%`;
+    hud.mgn.textContent = Math.round(P.magnet);
+    hud.kills.textContent = G.kills;
+  }
+
+  function timeStr(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  // ---------- Weapons & Upgrades ----------
+  const WEAPON_DATA = {
+    'Magic Wand': [
+      {dmg:10, cd:1.2, spd:240, shots:1, desc:"Auto-targets nearest enemy."},
+      {dmg:14}, {cd:-0.1}, {shots:+1}, {dmg:18}, {cd:-0.15}, {shots:+1}, {dmg:24, spd:300},
+    ],
+    'Knife': [
+      {dmg:8, cd:0.8, spd:320, shots:1, desc:"Fires in move direction."},
+      {shots:+1}, {dmg:11}, {cd:-0.1}, {shots:+1}, {dmg:15}, {cd:-0.1}, {shots:+1},
+    ],
+    'Garlic': [
+      {dmg:5, cd:0.3, radius:42, desc:"Aura damages nearby enemies."},
+      {radius:+10}, {dmg:7}, {radius:+12}, {dmg:9}, {radius:+14}, {dmg:12}, {radius:+16},
+    ],
+    'Bible': [
+      {dmg:6, cd:3.6, speed:1.8, count:1, radius:72, desc:"Books orbit & damage enemies."},
+      {count:+1}, {dmg:8}, {radius:+12}, {count:+1}, {speed:+.3}, {dmg:12}, {count:+1},
+    ],
+  };
+
+  const PASSIVE_DATA = {
+    'Move Speed': {stacks:5, val:+0.10, desc:"+10% movement speed"},
+    'Cooldown':   {stacks:5, val:-0.06, desc:"-6% weapon cooldown"},
+    'Magnet':     {stacks:5, val:+12,   desc:"+12 pickup range"},
+    'Max HP':     {stacks:5, val:+20,   desc:"+20 max HP & heal 20"},
+    'Might':      {stacks:5, val:+0.10, desc:"+10% damage"},
+  };
+
+  function getWeaponLevel(name){ return (P.weapons[name]?.level||0); }
+  function getWeaponStats(name){
+    const lvl = getWeaponLevel(name);
+    const base = WEAPON_DATA[name][0]||{};
+    const stats = {...base};
+    for(let i=1;i<lvl;i++){
+      const m = WEAPON_DATA[name][i] || {};
+      for(const k in m){
+        const v=m[k];
+        if(typeof v==='number'){
+          if(k==='shots' || k==='radius' || k==='spd' || k==='speed' || k==='count' || k==='dmg' || k==='cd') {
+            stats[k]=(stats[k]??0)+(v);
+          }
+        }
+      }
+    }
+    // apply passives
+    const might = 1 + (P.might-1);
+    if(stats.dmg) stats.dmg *= might;
+    if(stats.cd) stats.cd = Math.max(0.05, stats.cd*(1+P.cdr));
+    return stats;
+  }
+
+  function grantWeapon(name){
+    if(!P.weapons[name]) P.weapons[name] = {level:0, timer:0};
+    P.weapons[name].level = Math.min(WEAPON_DATA[name].length, P.weapons[name].level+1);
+    if(name==='Garlic' && !P.weapons[name].aura){
+      P.weapons[name].aura = {t:0};
+    }
+    if(name==='Bible' && !P.weapons[name].spawned){
+      P.weapons[name].spawned = true;
+    }
+  }
+
+  function grantPassive(name){
+    const d = PASSIVE_DATA[name];
+    const cur = P.passives[name]||0;
+    if(cur>=d.stacks) return false;
+    P.passives[name]=cur+1;
+    switch(name){
+      case 'Move Speed': P.moveBonus += d.val; break;
+      case 'Cooldown':   P.cdr += d.val; break;
+      case 'Magnet':     P.magnet += d.val; break;
+      case 'Max HP':     P.maxHp += d.val; P.hp = Math.min(P.maxHp, P.hp + d.val); break;
+      case 'Might':      P.might += d.val; break;
+    }
+    return true;
+  }
+
+  // ---------- Enemy Spawning ----------
+  function spawnEnemy(type, x, y) {
+    const E = {type, x, y, r:11, hp:20, speed:40, touch:8, t:0};
+    if(type==='zombie'){ E.hp=34*G.difficulty; E.speed=38+rand(-6,6); E.r=12; }
+    if(type==='bat'){ E.hp=14*G.difficulty; E.speed=72+rand(-10,18); E.r=10; }
+    if(type==='slime'){ E.hp=60*G.difficulty; E.speed=24+rand(-4,6); E.r=13; }
+    E.maxHp=E.hp;
+    G.enemies.push(E);
+  }
+
+  function spawnWave(dt) {
+    // Spawn rate scales with time
+    const rate = 0.8 + G.elapsed*0.03; // enemies/sec
+    G._spawnAcc = (G._spawnAcc||0) + dt*rate;
+    while(G._spawnAcc>=1){
+      G._spawnAcc-=1;
+      const angle = rand(0, TAU);
+      const dist = 480 + rand(0, 240);
+      const ex = P.x + Math.cos(angle)*dist;
+      const ey = P.y + Math.sin(angle)*dist;
+      // choose type depending on time
+      const t = G.elapsed;
+      let type = 'zombie';
+      const roll = Math.random();
+      if (t>45 && roll<0.35) type='bat';
+      if (t>90 && roll<0.25) type='slime';
+      if (t>180 && roll<0.45) type=choose(['bat','zombie','zombie','slime']);
+      spawnEnemy(type, ex, ey);
+    }
+    // every 30s increase difficulty
+    G.difficulty = 1 + Math.floor(G.elapsed/30)*0.15;
+  }
+
+  // ---------- XP Gems & Pickups ----------
+  function dropLoot(ex, ey) {
+    // Gem value 1..3
+    const v = Math.random()<0.12 ? 3 : (Math.random()<0.5?2:1);
+    G.gems.push({x:ex,y:ey,r:7,v,mag:false,t:0});
+    // Rare: chest / pickups
+    if(Math.random()<0.06){
+      const pick = Math.random();
+      if (pick<0.50) G.pickups.push({kind:'chicken', x:ex+rand(-16,16), y:ey+rand(-16,16), r:10});
+      else G.pickups.push({kind:'magnet', x:ex+rand(-16,16), y:ey+rand(-16,16), r:10});
+    }
+    if(Math.random()<0.03){
+      G.pickups.push({kind:'chest', x:ex+rand(-12,12), y:ey+rand(-12,12), r:12});
+    }
+  }
+
+  function collectGem(g){
+    P.xp += g.v;
+    while(P.xp>=P.xpTo){
+      P.xp -= P.xpTo;
+      P.level++;
+      P.xpTo = Math.floor(10 + P.level*2 + Math.pow(P.level,1.25));
+      levelUp();
+    }
+    updateHUD();
+  }
+
+  // ---------- Projectiles ----------
+  function fireMagicWand(stats){
+    const target = findNearestEnemy(560);
+    if(!target) return;
+    for(let s=0;s<(stats.shots||1);s++){
+      const angle = Math.atan2(target.y-P.y, target.x-P.x) + rand(-0.18,0.18);
+      G.projs.push({
+        kind:'wand', x:P.x, y:P.y, r:5, spd:stats.spd||260, angle, dmg:stats.dmg||8, life:1.6
+      });
+    }
+  }
+  function fireKnife(stats){
+    let dir = Math.atan2(P.vy||0.0001, P.vx||0.0001);
+    if (Math.hypot(P.vx, P.vy)<1) dir = 0; // default right
+    const count = stats.shots||1;
+    const spread = Math.min(0.35, 0.12*(count-1));
+    for(let i=0;i<count;i++){
+      const a = dir + (i-(count-1)/2)*spread;
+      G.projs.push({kind:'knife', x:P.x, y:P.y, r:5, spd:stats.spd||320, angle:a, dmg:stats.dmg||8, life:0.95});
+    }
+  }
+  function updateGarlic(stats, dt){
+    // aura damage ticked via timer
+    const aura = P.weapons['Garlic'].aura;
+    aura.t += dt;
+    if (aura.t >= (stats.cd||0.3)) {
+      aura.t = 0;
+      for(const e of G.enemies){
+        if(!e) continue;
+        const d2 = dist2(e, P);
+        const rr = (stats.radius||36); const rr2 = rr*rr;
+        if(d2 <= rr2) {
+          hitEnemy(e, (stats.dmg||5));
+        }
+      }
+    }
+    // draw aura as circle
+    G.effects.push({kind:'aura', x:P.x, y:P.y, r:(stats.radius||36), t:0.12});
+  }
+  function updateBible(stats, dt){
+    const count = Math.max(1, Math.floor((getWeaponStats('Bible').count||1)));
+    while(G.orbits.length<count){
+      G.orbits.push({kind:'bible', angle: Math.random()*TAU, dist:(stats.radius||72), speed:(stats.speed||1.6), dmg:(stats.dmg||6), r:8});
+    }
+    while(G.orbits.length>count) G.orbits.pop();
+    // orbit positions and damage on contact
+    for(const b of G.orbits){
+      b.angle += (stats.speed||1.6)*dt;
+      b.x = P.x + Math.cos(b.angle)* (stats.radius||72);
+      b.y = P.y + Math.sin(b.angle)* (stats.radius||72);
+      for(const e of G.enemies){
+        if(!e) continue;
+        const rr = (e.r + b.r);
+        if(dist2(e,b) <= rr*rr) hitEnemy(e, b.dmg);
+      }
+    }
+  }
+
+  function findNearestEnemy(range=9999){
+    let minD=Infinity, found=null;
+    for(const e of G.enemies){
+      const d = dist2(e,P);
+      if(d<minD && d<=range*range){ minD=d; found=e; }
+    }
+    return found;
+  }
+
+  function hitEnemy(e, dmg){
+    e.hp -= dmg;
+    G.effects.push({kind:'hit', x:e.x+rand(-4,4), y:e.y+rand(-4,4), t:0.08});
+    G.dpsTrack.push({t:now(), dmg});
+    if(e.hp<=0){
+      // death
+      G.kills++;
+      dropLoot(e.x, e.y);
+      // small poof
+      for(let i=0;i<4;i++) G.effects.push({kind:'poof', x:e.x+rand(-6,6), y:e.y+rand(-6,6), t:0.25});
+      // remove
+      e.dead=true;
+    }
+  }
+
+  // ---------- Level Up UI ----------
+  function levelUp(){
+    G.running=false;
+    levelOverlay.classList.add('show');
+    choicesEl.innerHTML='';
+    const options = [];
+
+    // collect possible upgrades: weapons not maxed or new
+    for(const w in WEAPON_DATA){
+      const lvl = getWeaponLevel(w);
+      if(lvl===0) options.push({type:'weapon', key:w, label:`${w} I`, desc:WEAPON_DATA[w][0].desc});
+      else if(lvl < WEAPON_DATA[w].length) options.push({type:'weapon', key:w, label:`${w} Lv ${lvl+1}`, desc:"Power up"});
+    }
+    // passives with stacks left
+    for(const p in PASSIVE_DATA){
+      const cur = P.passives[p]||0;
+      if(cur < PASSIVE_DATA[p].stacks) options.push({type:'passive', key:p, label:`${p} +`, desc:PASSIVE_DATA[p].desc + ` (x${cur}/${PASSIVE_DATA[p].stacks})`});
+    }
+    shuffle(options);
+    const shown = options.slice(0, Math.min(3, options.length));
+    if(shown.length===0){
+      // fallback heal
+      shown.push({type:'heal', key:'heal', label:'Recover', desc:'Recover 30 HP'});
+    }
+    for(const opt of shown){
+      const div = document.createElement('div');
+      div.className='card';
+      div.innerHTML = `<h3>${opt.label}</h3><p>${opt.desc}</p>`;
+      div.onclick = () => {
+        if(opt.type==='weapon') {
+          grantWeapon(opt.key);
+          addLog(`Upgrade: ${opt.label}`);
+        } else if(opt.type==='passive') {
+          grantPassive(opt.key);
+          addLog(`Passive: ${opt.key}`);
+        } else if(opt.type==='heal'){
+          P.hp = Math.min(P.maxHp, P.hp+30);
+        }
+        updateHUD();
+        levelOverlay.classList.remove('show');
+        G.running=true;
+      };
+      choicesEl.appendChild(div);
+    }
+  }
+
+  // ---------- Game Loop ----------
+  function update(dt){
+    // input
+    let ax=0, ay=0;
+    if(keys.has('arrowleft')||keys.has('a')) ax-=1;
+    if(keys.has('arrowright')||keys.has('d')) ax+=1;
+    if(keys.has('arrowup')||keys.has('w')) ay-=1;
+    if(keys.has('arrowdown')||keys.has('s')) ay+=1;
+    const mag = Math.hypot(ax,ay)||1;
+    ax/=mag; ay/=mag;
+    const ms = P.speed * P.moveBonus;
+    P.vx = ax*ms; P.vy = ay*ms;
+    P.x += P.vx*dt; P.y += P.vy*dt;
+
+    // camera
+    G.camera.x = P.x; G.camera.y = P.y;
+
+    // spawn enemies
+    spawnWave(dt);
+
+    // enemies move toward player
+    for(const e of G.enemies){
+      if(!e || e.dead) continue;
+      e.t += dt;
+      const dx = P.x - e.x, dy = P.y - e.y;
+      const d = Math.hypot(dx,dy)||1;
+      e.x += (dx/d) * e.speed * dt;
+      e.y += (dy/d) * e.speed * dt;
+      // slime wobble
+      if(e.type==='slime'){ e.x += Math.sin(e.t*3)*6*dt; }
+      // contact damage
+      const rr = e.r + P.r;
+      if (dist2(e,P) <= rr*rr) {
+        if(P.iframes<=0){
+          const dmg = e.touch;
+          P.hp -= dmg;
+          P.iframes = 0.7;
+          G.effects.push({kind:'hitP', x:P.x, y:P.y, t:0.18});
+          updateHUD();
+          if(P.hp<=0) return gameOver();
+        }
+      }
+    }
+    // clean dead
+    for (let i=G.enemies.length-1;i>=0;i--) if(G.enemies[i].dead) G.enemies.splice(i,1);
+
+    // pickups magnetism & collection
+    for(const g of G.gems){
+      g.t += dt;
+      const d2p = dist2(g,P);
+      const pr = P.magnet + (g.mag?400:0);
+      if (d2p <= pr*pr) {
+        // move toward player
+        const d = Math.sqrt(d2p)||1;
+        g.x += (P.x-g.x)/d * (160+g.v*30) * dt;
+        g.y += (P.y-g.y)/d * (160+g.v*30) * dt;
+        g.mag = true;
+      }
+      // collect
+      if (d2p <= (P.r+10)*(P.r+10)) {
+        g.dead=true;
+        collectGem(g);
+      }
+    }
+    for(let i=G.gems.length-1;i>=0;i--) if(G.gems[i].dead) G.gems.splice(i,1);
+
+    for(const p of G.pickups){
+      // attract mildly
+      const d2p = dist2(p,P);
+      if(d2p < (P.magnet*P.magnet*0.4)){
+        const d = Math.sqrt(d2p)||1;
+        p.x += (P.x-p.x)/d * 120 * dt;
+        p.y += (P.y-p.y)/d * 120 * dt;
+      }
+      if(d2p <= (P.r+12)*(P.r+12)){
+        // apply
+        if(p.kind==='chicken'){ P.hp = Math.min(P.maxHp, P.hp+30); addLog("🍗 Chicken +30 HP"); }
+        if(p.kind==='magnet'){ for(const g of G.gems){ g.mag=true; } addLog("🧲 Vacuum!"); }
+        if(p.kind==='chest'){
+          addLog("📦 Found a chest! Free upgrade.");
+          // choose random available upgrade
+          chestUpgrade();
+        }
+        p.dead=true; updateHUD();
+      }
+    }
+    for(let i=G.pickups.length-1;i>=0;i--) if(G.pickups[i].dead) G.pickups.splice(i,1);
+
+    // weapon timers & fire
+    for(const name in P.weapons){
+      const W = P.weapons[name];
+      const st = getWeaponStats(name);
+      W.timer = (W.timer||0) - dt;
+      if(name==='Garlic') updateGarlic(st, dt);
+      if(name==='Bible') updateBible(st, dt);
+      if (W.timer<=0){
+        // fire
+        if(name==='Magic Wand') fireMagicWand(st);
+        if(name==='Knife') fireKnife(st);
+        // bible fires by maintaining orbits; no timed burst
+        if(name!=='Bible' && name!=='Garlic'){
+          W.timer = Math.max(0.05, (st.cd||1.0));
+        } else {
+          W.timer = (st.cd||1.0); // not really used for garlic (handled separately)
+        }
+      }
+    }
+
+    // projectiles update
+    for(const pr of G.projs){
+      pr.life -= dt;
+      pr.x += Math.cos(pr.angle)*(pr.spd*dt);
+      pr.y += Math.sin(pr.angle)*(pr.spd*dt);
+      if(pr.kind==='wand'){
+        // slight home toward nearest enemy
+        const t = findNearestEnemy(360);
+        if(t){
+          const desired = Math.atan2(t.y-pr.y, t.x-pr.x);
+          let da = ((desired - pr.angle + Math.PI*3) % TAU) - Math.PI;
+          pr.angle += clamp(da, -3*dt, 3*dt);
+        }
+      }
+      // hit enemies
+      for(const e of G.enemies){
+        if(!e || e.dead) continue;
+        const rr = e.r + pr.r;
+        if(dist2(e, pr) <= rr*rr){
+          hitEnemy(e, pr.dmg);
+          pr.life = 0;
+          break;
+        }
+      }
+    }
+    for(let i=G.projs.length-1;i>=0;i--) if(G.projs[i].life<=0) G.projs.splice(i,1);
+
+    // orbits already handled in updateBible
+
+    // effects
+    for(const ef of G.effects){ ef.t -= dt; }
+    for(let i=G.effects.length-1;i>=0;i--) if(G.effects[i].t<=0) G.effects.splice(i,1);
+
+    // iframes
+    P.iframes = Math.max(0, P.iframes - dt);
+
+    // timers
+    G.elapsed += dt;
+    hud.time.textContent = timeStr(G.elapsed);
+
+    // DPS tracker (last 3s)
+    const tNow = now();
+    const windowMs = 3000;
+    G.dpsTrack = G.dpsTrack.filter(e=>tNow - e.t < windowMs);
+    const sum = G.dpsTrack.reduce((a,b)=>a+b.dmg,0);
+    hud.dps.textContent = Math.round(sum * (1000/windowMs));
+  }
+
+  function chestUpgrade(){
+    // pick random upgrade among weapons first, else passives
+    const up = [];
+    for(const w in WEAPON_DATA){
+      const lvl = getWeaponLevel(w);
+      if(lvl===0 || lvl<WEAPON_DATA[w].length) up.push({type:'weapon', key:w});
+    }
+    for(const p in PASSIVE_DATA){
+      const cur = P.passives[p]||0;
+      if(cur < PASSIVE_DATA[p].stacks) up.push({type:'passive', key:p});
+    }
+    if(up.length===0){ P.hp = Math.min(P.maxHp, P.hp+40); addLog("Chest heal +40"); return; }
+    const pick = choose(up);
+    if(pick.type==='weapon'){ grantWeapon(pick.key); addLog(`Chest: ${pick.key} +1`); }
+    else { grantPassive(pick.key); addLog(`Chest passive: ${pick.key}`); }
+    updateHUD();
+  }
+
+  function gameOver(){
+    G.running=false;
+    gameOverOverlay.classList.add('show');
+    finalStats.innerHTML = `
+      <div>Kills: <b>${G.kills}</b></div>
+      <div>Level: <b>${P.level}</b></div>
+      <div>Time: <b>${timeStr(G.elapsed)}</b></div>
+      <div>Max DPS(3s window): <b>${hud.dps.textContent}</b></div>
+    `;
+  }
+
+  // ---------- Rendering ----------
+  function render(dt, force=false){
+    // fit canvas to CSS size
+    const w = canvas.clientWidth|0, h = canvas.clientHeight|0;
+    if (canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
+
+    // background tiles (infinite)
+    const s = 24; // pixel scale per tile
+    const camx = G.camera.x, camy = G.camera.y;
+    const cols = Math.ceil(w/s)+2, rows = Math.ceil(h/s)+2;
+    const ox = Math.floor((camx - w/2)/s), oy = Math.floor((camy - h/2)/s);
+    for(let j=0;j<rows;j++){
+      for(let i=0;i<cols;i++){
+        const gx = ox+i, gy=oy+j;
+        // procedural color
+        const r = (Math.sin(gx*0.37+gy*0.21)+1)/2;
+        const idx = 1 + ((r*6)|0);
+        ctx.fillStyle = PALETTES.map[idx];
+        const px = (i*s - ((camx - w/2)%s)), py = (j*s - ((camy - h/2)%s));
+        ctx.fillRect(px,py,s+1,s+1);
+        // grid dots
+        if(((gx+gy)&7)===0){
+          ctx.fillStyle="#00000022";
+          ctx.fillRect(px+ (s/2|0), py+ (s/2|0), 2,2);
+        }
+      }
+    }
+
+    // draw gems
+    for(const g of G.gems){
+      const sx = g.x - camx + w/2, sy = g.y - camy + h/2;
+      drawSprite('gemBlue', sx, sy, 3, 'proj');
+    }
+    // draw pickups
+    for(const p of G.pickups){
+      const sx = p.x - camx + w/2, sy = p.y - camy + h/2;
+      if(p.kind==='chicken') drawSprite('chicken', sx, sy, 3, 'proj');
+      else if(p.kind==='magnet') drawSprite('magnet', sx, sy, 3, 'proj');
+      else if(p.kind==='chest') drawSprite('chest', sx, sy, 3, 'proj');
+    }
+    // draw enemies
+    for(const e of G.enemies){
+      const sx = e.x - camx + w/2, sy = e.y - camy + h/2;
+      if(e.type==='zombie') drawSprite('zombie', sx, sy, 3, 'zombie');
+      if(e.type==='bat') drawSprite('bat', sx, sy, 3, 'bat', Math.sin(e.t*12)*0.1);
+      if(e.type==='slime') drawSprite('slime', sx, sy, 3, 'slime');
+      // tiny hp bar
+      ctx.fillStyle="#0008"; ctx.fillRect(sx-12, sy+14, 24, 3);
+      ctx.fillStyle="#4caf50"; ctx.fillRect(sx-12, sy+14, 24*(e.hp/e.maxHp), 3);
+    }
+    // draw orbits
+    for(const b of G.orbits){
+      const sx = b.x - camx + w/2, sy = b.y - camy + h/2;
+      drawSprite('bible', sx, sy, 2, 'proj', b.angle);
+    }
+    // draw projectiles
+    for(const pr of G.projs){
+      const sx = pr.x - camx + w/2, sy = pr.y - camy + h/2;
+      if(pr.kind==='wand') drawSprite('wandProj', sx, sy, 2, 'proj', pr.angle);
+      if(pr.kind==='knife') drawSprite('knifeProj', sx, sy, 2, 'proj', pr.angle);
+    }
+    // draw garlic aura effect
+    for(const ef of G.effects){
+      if(ef.kind==='aura'){
+        const sx = ef.x - camx + w/2, sy = ef.y - camy + h/2;
+        ctx.beginPath(); ctx.arc(sx, sy, ef.r, 0, TAU);
+        ctx.strokeStyle = `rgba(114,224,168,${Math.max(0, ef.t/0.12)})`;
+        ctx.lineWidth = 3; ctx.stroke();
+      }
+      if(ef.kind==='poof'){
+        const sx = ef.x - camx + w/2, sy = ef.y - camy + h/2;
+        ctx.fillStyle = `rgba(200,200,200,${ef.t/0.25})`;
+        ctx.fillRect(sx-2, sy-2, 4,4);
+      }
+      if(ef.kind==='hit'){
+        const sx = ef.x - camx + w/2, sy = ef.y - camy + h/2;
+        ctx.fillStyle = `rgba(255,90,90,${ef.t/0.08})`;
+        ctx.fillRect(sx-2, sy-2, 4,4);
+      }
+      if(ef.kind==='hitP'){
+        const sx = ef.x - camx + w/2, sy = ef.y - camy + h/2;
+        ctx.strokeStyle = `rgba(255,107,107,${ef.t/0.18})`;
+        ctx.lineWidth=2; ctx.strokeRect(sx-14, sy-14, 28,28);
+      }
+    }
+    // draw player
+    {
+      const sx = P.x - camx + w/2, sy = P.y - camy + h/2;
+      const blink = P.iframes>0 && ((now()/80|0)%2===0);
+      if(!blink) drawSprite('player', sx, sy, 3, 'player');
+      // player hp ring
+      ctx.beginPath(); ctx.arc(sx, sy, 20, -Math.PI/2, -Math.PI/2 + TAU*(P.hp/P.maxHp));
+      ctx.strokeStyle="#72e0a8"; ctx.lineWidth=2; ctx.stroke();
+    }
+  }
+
+  function frame(tms){
+    const t = tms||now();
+    const dt = Math.min(0.033, (t - G.lastTime)/1000 || 0.016);
+    G.lastTime = t;
+    if(G.running) update(dt);
+    render(dt);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Controls ----------
+  btnStart.addEventListener('click', ()=>{ startOverlay.classList.remove('show'); G.running=true; G.lastTime=now(); });
+  btnRetry.addEventListener('click', ()=>{ gameOverOverlay.classList.remove('show'); resetGame(); startOverlay.classList.remove('show'); G.running=true; G.lastTime=now(); });
+
+  // ---------- Boot ----------
+  resetGame();
+  requestAnimationFrame(frame);
+
+  // Provide some early upgrade choices to try: press 'u' to force level
+  window.addEventListener('keydown', (e)=>{
+    if(e.key.toLowerCase()==='u' && !levelOverlay.classList.contains('show') && G.running){
+      P.xp = P.xpTo; collectGem({v:0}); // trigger level
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
