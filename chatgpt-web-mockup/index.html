@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Introducing GPT-5 — Mock</title>
+<style>
+  :root{
+    --bg1: #ffd9a8;
+    --bg2: #ffb39f;
+    --bg3: #eab1ff;
+    --bg4: #a9c4ff;
+    --text: #0f172a;
+    --muted: #4b5563;
+    --pill: rgba(255,255,255,.92);
+    --shadow: 0 6px 24px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display","SF Pro Text", system-ui, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--text);
+    background:
+      radial-gradient(60% 70% at 85% 10%, rgba(255,210,140,.85) 0%, rgba(255,210,140,0) 60%),
+      radial-gradient(65% 80% at 20% 5%, rgba(170,200,255,.9) 0%, rgba(170,200,255,0) 50%),
+      radial-gradient(80% 70% at 100% 40%, rgba(255,150,140,.65) 0%, rgba(255,150,140,0) 60%),
+      linear-gradient(180deg, #f4e9ff 0%, #ffe5dd 35%, #fff7ef 65%, #ffffff 90%);
+    background-attachment: fixed;
+  }
+  .topbar{
+    position:fixed; inset:0 0 auto 0;
+    height:56px; padding:0 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    backdrop-filter: blur(6px);
+    background: linear-gradient(to bottom, rgba(255,255,255,.45), rgba(255,255,255,0));
+  }
+  .iconbtn{
+    width:36px;height:36px;border:none;background:transparent;border-radius:10px;
+    display:grid;place-items:center;
+  }
+  .iconbtn:active{background:rgba(0,0,0,.06)}
+  .title{display:flex; align-items:center; gap:6px; font-weight:600; letter-spacing:.2px;}
+  .title .badge{
+    display:inline-grid; place-items:center; width:18px;height:18px; font-size:12px;
+    border-radius:5px; background:rgba(0,0,0,.08); margin-left:2px;
+  }
+  .chev{width:14px;height:14px;opacity:.7}
+  main{
+    min-height:100%; display:flex; flex-direction:column;
+    align-items:center; text-align:center; justify-content:center;
+    padding:72px 20px calc(140px + env(safe-area-inset-bottom, 0));
+  }
+  h1{font-size:clamp(26px, 4.8vw, 44px); margin:0 0 14px 0; letter-spacing:.2px;}
+  p.lede{max-width:680px; font-size:clamp(16px, 2.2vw, 20px); color:var(--muted); line-height:1.6; margin:0;}
+  .composer{
+    position:fixed; left:0; right:0; bottom:0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0));
+    display:flex; gap:12px; align-items:flex-end; justify-content:center;
+    pointer-events:none;
+  }
+  .composer > *{pointer-events:auto}
+  .fab{
+    width:56px;height:56px;border-radius:50%;
+    border:none; background:var(--pill);
+    box-shadow: var(--shadow);
+    display:grid; place-items:center;
+  }
+  .fab svg{width:24px;height:24px;opacity:.9}
+  .input{
+    flex:1; max-width:840px;
+    display:flex; align-items:center; gap:10px;
+    background:var(--pill);
+    border-radius:999px;
+    box-shadow: var(--shadow);
+    padding: 14px 14px 14px 18px;
+  }
+  .placeholder{flex:1; color:#6b7280; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .right-icons{display:flex; gap:6px; align-items:center}
+  .chip{
+    width:36px;height:36px;border-radius:999px;border:none;background:#111; color:#fff;
+    display:grid; place-items:center;
+  }
+  .ghost{
+    width:36px;height:36px;border-radius:999px;border:none;background:transparent;
+    display:grid; place-items:center;
+  }
+  .ghost:hover{background:rgba(0,0,0,.06)}
+  svg{shape-rendering:geometricPrecision}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <button class="iconbtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 6.5h16M4 12h16M4 17.5h16" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">
+      <span>ChatGPT</span><span class="badge">5</span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <button class="iconbtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="5" y="5" width="14" height="14" rx="3" stroke-dasharray="3.6 3.6"/>
+      </svg>
+    </button>
+  </header>
+  <main>
+    <h1>Introducing GPT-5</h1>
+    <p class="lede">ChatGPT now has our smartest, fastest, most useful model yet, with thinking built in — so you get the best answer, every time.</p>
+  </main>
+  <footer class="composer">
+    <button class="fab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="input">
+      <span class="placeholder">Ask anything</span>
+      <div class="right-icons">
+        <button class="ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 4a3 3 0 013 3v5a3 3 0 01-6 0V7a3 3 0 013-3z"/>
+            <path d="M19 11a7 7 0 01-14 0" stroke-linecap="round"/>
+            <path d="M12 18v3" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h2M7 9v6M11 6v12M15 9v6M19 12h2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
