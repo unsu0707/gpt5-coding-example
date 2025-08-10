@@ -1,0 +1,4 @@
+# Bitcoin Invest Simulation
+
+### Used Prompt:
+Obtain the monthly closing price history of Bitcoin from 2015 to 2025. Organize it into a table. Then, create a Bitcoin investment simulation webpage as a single HTML code that generates a report showing the initial investment amount, the actual value at the time of investment, and the current value when you input the investment period, investment interval, and amount per investment. Design the UI and result charts to be easy to understand and visually engaging. For the graph, display two line charts (initial investment amount and actual value at the time of investment) overlaid in a single graph space.

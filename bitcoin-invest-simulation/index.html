@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bitcoin DCA Simulator (2015–2025)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<style>
+  :root{
+    --bg:#0b0f14; --card:#111827; --ink:#e5e7eb; --ink-dim:#a7b0bf;
+    --accent:#60a5fa; --accent2:#34d399; --warn:#f59e0b; --muted:#1f2937;
+    --grid:rgba(255,255,255,.06);
+  }
+  html,body{margin:0;background:linear-gradient(160deg,#0b0f14,#0a1220 60%,#0b0f14);color:var(--ink);font:15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+  .wrap{max-width:1100px;margin:40px auto;padding:0 20px;}
+  header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .badge{background:linear-gradient(135deg,#111827,#0f172a);border:1px solid #1f2a3a;border-radius:14px;padding:6px 10px;color:#a7b0bf}
+  .card{background:linear-gradient(180deg,rgba(17,24,39,.85),rgba(17,24,39,.72));backdrop-filter: blur(6px);
+        border:1px solid #1e293b;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .grid{display:grid;gap:14px}
+  .grid.cols-2{grid-template-columns:1.2fr .8fr}
+  .controls{padding:16px}
+  .controls form{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  .controls label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px}
+  .controls input,.controls select, .controls button{
+    width:100%;border-radius:10px;border:1px solid #243244;background:#0c1624;color:var(--ink);padding:10px 12px;
+  }
+  .controls button{
+    background:linear-gradient(180deg,#2563eb,#1e40af);border:0;font-weight:600;cursor:pointer;transition:.18s;
+  }
+  .controls button:hover{filter:brightness(1.08)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px}
+  .kpi{padding:14px;border-radius:12px;background:linear-gradient(180deg,#0e1727,#0b1320);border:1px solid #1f2a3a}
+  .kpi b{display:block;font-size:12px;color:#b7c2d3;margin-bottom:6px}
+  .kpi span{font-size:20px;font-weight:700}
+  .kpi small{display:block;color:#9fb0c8;margin-top:2px}
+  .chartWrap{padding:16px}
+  canvas{width:100%;max-height:380px}
+  .tableWrap{padding:16px;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid #1e293b;white-space:nowrap}
+  th{position:sticky;top:0;background:#0e1625;color:#bcd0ee;border-bottom:1px solid #23324a}
+  tr:hover td{background:#0c1522}
+  .note{color:#94a3b8;font-size:12px;margin-top:10px}
+  .pill{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:#0e1a2c;border:1px solid #1f2a3a;color:#b7c2d3;font-size:12px}
+  .row{display:flex;gap:10px;align-items:center}
+  .right{justify-content:flex-end}
+  .muted{color:#9fb0c8}
+  .ok{color:#34d399} .bad{color:#fca5a5} .warn{color:#fbbf24}
+  @media (max-width:980px){.grid.cols-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="#60a5fa" stroke-width="1.5"/>
+          <path d="M8 15c2.2-2.7 5.8-5.2 8-3.2 1.6 1.4 1.4 4.1-1.3 5.9" stroke="#34d399" stroke-width="1.6" fill="none"/>
+          <circle cx="8" cy="15" r="1.5" fill="#34d399"/><circle cx="16" cy="15" r="1.5" fill="#60a5fa"/>
+        </svg>
+        <div>
+          <h1 style="margin:0;font-size:20px">Bitcoin DCA Simulator</h1>
+          <div class="muted" style="font-size:12px">2015–2025 monthly prices • single-file</div>
+        </div>
+      </div>
+      <div class="row right">
+        <span class="badge">Two-line overlay: Principal vs Value @ date</span>
+      </div>
+    </header>
+
+    <section class="grid cols-2">
+      <div class="card controls">
+        <form id="sim-form">
+          <div style="grid-column:span 2">
+            <label>Start (YYYY-MM)</label>
+            <input id="start" type="month" value="2017-01" min="2015-01" max="2025-04" />
+          </div>
+          <div style="grid-column:span 2">
+            <label>End (YYYY-MM)</label>
+            <input id="end" type="month" value="2025-04" min="2015-01" max="2025-04" />
+          </div>
+          <div>
+            <label>Interval</label>
+            <select id="interval">
+              <option value="1">Every 1 month</option>
+              <option value="2">Every 2 months</option>
+              <option value="3">Quarterly (3 mo)</option>
+              <option value="6">Every 6 months</option>
+              <option value="12">Yearly (12 mo)</option>
+            </select>
+          </div>
+          <div>
+            <label>Amount per investment (USD)</label>
+            <input id="amount" type="number" value="10000" step="100" min="1" />
+          </div>
+          <div style="grid-column:span 2;display:flex;gap:10px;align-items:end">
+            <button id="run" type="submit">Run simulation</button>
+            <button id="download" type="button" style="background:linear-gradient(180deg,#059669,#065f46)">Download report CSV</button>
+            <span class="pill">Current price = last point in dataset</span>
+          </div>
+        </form>
+        <div class="note">Data note: prices are the USD value on the <b>first day of each month</b> (proxy for prior month’s close). Source: Finance Reference. </div>
+      </div>
+
+      <div class="card kpis" id="kpis">
+        <div class="kpi"><b>Total invested</b><span id="kpi-invested">$0</span><small class="muted">Cumulative principal</small></div>
+        <div class="kpi"><b>Current value</b><span id="kpi-current">$0</span><small class="muted">Holdings @ latest price</small></div>
+        <div class="kpi"><b>Unrealized P/L</b><span id="kpi-pl">$0</span><small id="kpi-plp" class="muted">0%</small></div>
+        <div class="kpi"><b>Investments made</b><span id="kpi-count">0</span><small class="muted"># of purchases</small></div>
+      </div>
+    </section>
+
+    <section class="card chartWrap">
+      <canvas id="chart"></canvas>
+      <div class="note">Chart shows <b>Principal (cumulative)</b> vs <b>Portfolio value @ each investment date</b> in one graph.</div>
+    </section>
+
+    <section class="card tableWrap">
+      <table id="report">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Price (USD)</th>
+            <th>Invested (USD)</th>
+            <th>Units bought (BTC)</th>
+            <th>Cum. principal (USD)</th>
+            <th>Value @ date (USD)</th>
+            <th>Current value (USD)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <p class="note">Built for clarity: clean inputs, single overlay chart, exportable report. No external keys required.</p>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+  // ======= Monthly BTC USD — first of month (2015-01 .. 2025-04) =======
+  const BTC_MONTHLY = [
+    // 2015
+    {d:'2015-01-01',p:314.25},{d:'2015-02-01',p:226.97},{d:'2015-03-01',p:260.20},{d:'2015-04-01',p:247.27},
+    {d:'2015-05-01',p:232.08},{d:'2015-06-01',p:222.93},{d:'2015-07-01',p:258.62},{d:'2015-08-01',p:281.60},
+    {d:'2015-09-01',p:228.12},{d:'2015-10-01',p:237.55},{d:'2015-11-01',p:325.43},{d:'2015-12-01',p:362.49},
+    // 2016
+    {d:'2016-01-01',p:434.33},{d:'2016-02-01',p:373.06},{d:'2016-03-01',p:435.12},{d:'2016-04-01',p:417.96},
+    {d:'2016-05-01',p:451.88},{d:'2016-06-01',p:536.92},{d:'2016-07-01',p:676.30},{d:'2016-08-01',p:606.27},
+    {d:'2016-09-01',p:572.30},{d:'2016-10-01',p:613.98},{d:'2016-11-01',p:729.79},{d:'2016-12-01',p:756.77},
+    // 2017
+    {d:'2017-01-01',p:998.33},{d:'2017-02-01',p:989.02},{d:'2017-03-01',p:1222.50},{d:'2017-04-01',p:1080.50},
+    {d:'2017-05-01',p:1421.60},{d:'2017-06-01',p:2407.88},{d:'2017-07-01',p:2434.55},{d:'2017-08-01',p:2718.26},
+    {d:'2017-09-01',p:4892.01},{d:'2017-10-01',p:4403.74},{d:'2017-11-01',p:6767.31},{d:'2017-12-01',p:10975.60},
+    // 2018
+    {d:'2018-01-01',p:13657.20},{d:'2018-02-01',p:9170.54},{d:'2018-03-01',p:10951.00},{d:'2018-04-01',p:6844.23},
+    {d:'2018-05-01',p:9119.01},{d:'2018-06-01',p:7541.45},{d:'2018-07-01',p:6385.82},{d:'2018-08-01',p:7624.91},
+    {d:'2018-09-01',p:7193.25},{d:'2018-10-01',p:6589.62},{d:'2018-11-01',p:6377.78},{d:'2018-12-01',p:4214.67},
+    // 2019
+    {d:'2019-01-01',p:3843.52},{d:'2019-02-01',p:3487.95},{d:'2019-03-01',p:3859.58},{d:'2019-04-01',p:4158.18},
+    {d:'2019-05-01',p:5402.70},{d:'2019-06-01',p:8564.02},{d:'2019-07-01',p:10583.13},{d:'2019-08-01',p:10399.67},
+    {d:'2019-09-01',p:9757.97},{d:'2019-10-01',p:8343.28},{d:'2019-11-01',p:9261.10},{d:'2019-12-01',p:7424.29},
+    // 2020
+    {d:'2020-01-01',p:7200.17},{d:'2020-02-01',p:9392.88},{d:'2020-03-01',p:8562.45},{d:'2020-04-01',p:6606.78},
+    {d:'2020-05-01',p:8864.77},{d:'2020-06-01',p:10167.27},{d:'2020-07-01',p:9228.33},{d:'2020-08-01',p:11759.59},
+    {d:'2020-09-01',p:11970.48},{d:'2020-10-01',p:10619.45},{d:'2020-11-01',p:13737.11},{d:'2020-12-01',p:18803.00},
+    // 2021
+    {d:'2021-01-01',p:29374.15},{d:'2021-02-01',p:33537.18},{d:'2021-03-01',p:49631.24},{d:'2021-04-01',p:59095.81},
+    {d:'2021-05-01',p:57828.05},{d:'2021-06-01',p:36684.93},{d:'2021-07-01',p:33572.12},{d:'2021-08-01',p:39974.89},
+    {d:'2021-09-01',p:48847.03},{d:'2021-10-01',p:48116.94},{d:'2021-11-01',p:61004.41},{d:'2021-12-01',p:57229.83},
+    // 2022
+    {d:'2022-01-01',p:47686.81},{d:'2022-02-01',p:38743.27},{d:'2022-03-01',p:44354.64},{d:'2022-04-01',p:46281.64},
+    {d:'2022-05-01',p:38469.09},{d:'2022-06-01',p:29799.08},{d:'2022-07-01',p:19269.37},{d:'2022-08-01',p:23314.20},
+    {d:'2022-09-01',p:20127.14},{d:'2022-10-01',p:19312.10},{d:'2022-11-01',p:20485.27},{d:'2022-12-01',p:16967.13},
+    // 2023
+    {d:'2023-01-01',p:16625.08},{d:'2023-02-01',p:23723.77},{d:'2023-03-01',p:23646.55},{d:'2023-04-01',p:28411.04},
+    {d:'2023-05-01',p:28091.57},{d:'2023-06-01',p:26819.97},{d:'2023-07-01',p:30590.08},{d:'2023-08-01',p:29675.73},
+    {d:'2023-09-01',p:25800.72},{d:'2023-10-01',p:27983.75},{d:'2023-11-01',p:35437.25},{d:'2023-12-01',p:38688.75},
+    // 2024
+    {d:'2024-01-01',p:44167.33},{d:'2024-02-01',p:43075.77},{d:'2024-03-01',p:62440.63},{d:'2024-04-01',p:69702.15},
+    {d:'2024-05-01',p:58254.01},{d:'2024-06-01',p:67706.94},{d:'2024-07-01',p:62851.98},{d:'2024-08-01',p:65357.50},
+    {d:'2024-09-01',p:57325.49},{d:'2024-10-01',p:60837.01},{d:'2024-11-01',p:69482.47},{d:'2024-12-01',p:97279.79},
+    // 2025
+    {d:'2025-01-01',p:94419.76},{d:'2025-02-01',p:100655.91},{d:'2025-03-01',p:86031.91},{d:'2025-04-01',p:85169.17},
+  ].map(x=>({date:new Date(x.d+'T00:00:00Z'), price:x.p}));
+
+  // Helpers
+  const fmtUSD = n => n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
+  const monthKey = d => d.toISOString().slice(0,7); // YYYY-MM
+
+  // Build quick lookup by YYYY-MM
+  const PRICE_BY_MONTH = Object.fromEntries(BTC_MONTHLY.map(x => [monthKey(x.date), x.price]));
+  const DATA_MONTHS = BTC_MONTHLY.map(x => monthKey(x.date));
+  const LATEST_PRICE = BTC_MONTHLY[BTC_MONTHLY.length-1].price;
+
+  function generateMonths(start, end, stepMonths=1){
+    const out=[]; const s = new Date(start+'-01T00:00:00Z'); const e = new Date(end+'-01T00:00:00Z');
+    if (s>e) return out;
+    let y=s.getUTCFullYear(), m=s.getUTCMonth();
+    const ey=e.getUTCFullYear(), em=e.getUTCMonth();
+    while (y<ey || (y===ey && m<=em)){
+      const mm = String(m+1).padStart(2,'0');
+      out.push(`${y}-${mm}`);
+      m+=stepMonths;
+      while (m>11){ m-=12; y++; }
+    }
+    return out;
+  }
+
+  // Simulation
+  function runSim({start,end,interval,amount}){
+    const months = generateMonths(start,end,interval).filter(k => PRICE_BY_MONTH[k]!==undefined);
+    let cumUnits=0, cumPrincipal=0;
+    const rows = [];
+    for (const k of months){
+      const price = PRICE_BY_MONTH[k];
+      const units = amount / price;
+      cumUnits += units;
+      cumPrincipal += amount;
+      const valueAtDate = cumUnits * price;
+      const currentValue = cumUnits * LATEST_PRICE;
+      rows.push({k, price, invested:amount, units, cumPrincipal, valueAtDate, currentValue});
+    }
+    return {rows, totalInvested:cumPrincipal, currentValue: (rows.at(-1)?.currentValue)||0, count: rows.length};
+  }
+
+  // UI bindings
+  const $ = sel => document.querySelector(sel);
+  const tbody = $("#report tbody");
+  const kpiInvested = $("#kpi-invested"), kpiCurrent=$("#kpi-current"), kpiPL=$("#kpi-pl"), kpiPLP=$("#kpi-plp"), kpiCount=$("#kpi-count");
+
+  // Chart
+  let chart;
+  function renderChart(rows){
+    const labels = rows.map(r=>r.k);
+    const principal = rows.map(r=>r.cumPrincipal);
+    const valueAt = rows.map(r=>r.valueAtDate);
+    const ctx = document.getElementById('chart');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {label:'Cumulative principal', data:principal, borderWidth:2, pointRadius:0, tension:.25},
+          {label:'Portfolio value @ date', data:valueAt, borderWidth:2, pointRadius:0, tension:.25}
+        ]
+      },
+      options:{
+        responsive:true,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{labels:{color:'#cfe1ff'}},
+          tooltip:{callbacks:{label:(ctx)=> `${ctx.dataset.label}: ${fmtUSD(ctx.parsed.y)}`}}
+        },
+        scales:{
+          x:{ticks:{color:'#93a7c3'}, grid:{color:'rgba(255,255,255,.05)'}},
+          y:{ticks:{color:'#93a7c3', callback:(v)=>fmtUSD(v)}, grid:{color:'rgba(255,255,255,.05)'}}
+        }
+      }
+    });
+  }
+
+  function renderTable(rows){
+    tbody.innerHTML = rows.map(r=>`
+      <tr>
+        <td>${r.k}</td>
+        <td>${fmtUSD(r.price)}</td>
+        <td>${fmtUSD(r.invested)}</td>
+        <td>${r.units.toFixed(8)}</td>
+        <td>${fmtUSD(r.cumPrincipal)}</td>
+        <td>${fmtUSD(r.valueAtDate)}</td>
+        <td>${fmtUSD(r.currentValue)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderKpis({totalInvested,currentValue,count}){
+    const pl = currentValue - totalInvested;
+    const plp = totalInvested>0 ? (pl/totalInvested*100) : 0;
+    kpiInvested.textContent = fmtUSD(totalInvested);
+    kpiCurrent.textContent = fmtUSD(currentValue);
+    kpiPL.textContent = (pl>=0?'+':'') + fmtUSD(pl);
+    kpiPL.className = 'kpi ' + (pl>0?'ok':(pl<0?'bad':''));
+    kpiPLP.textContent = (pl>=0?'+':'') + plp.toFixed(2) + '%';
+    kpiCount.textContent = count.toString();
+  }
+
+  function toCSV(rows){
+    const header = ['date','price_usd','invested_usd','units_btc','cum_principal_usd','value_at_date_usd','current_value_usd'];
+    const lines = [header.join(',')];
+    for(const r of rows){
+      lines.push([r.k,r.price,r.invested,r.units,r.cumPrincipal,r.valueAtDate,r.currentValue].join(','));
+    }
+    return lines.join('\n');
+  }
+
+  function defaultRun(){
+    const sim = runSim({start:$('#start').value, end:$('#end').value, interval:+$('#interval').value, amount:+$('#amount').value});
+    renderChart(sim.rows);
+    renderTable(sim.rows);
+    renderKpis(sim);
+    return sim;
+  }
+
+  // Events
+  document.getElementById('sim-form').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const s=$('#start').value, ed=$('#end').value;
+    if (s>ed){ alert('Start must be before End.'); return; }
+    const sim = defaultRun();
+    if (sim.count===0) alert('No data in that range (dataset spans 2015-01 through 2025-04).');
+  });
+
+  document.getElementById('download').addEventListener('click', ()=>{
+    const sim = defaultRun();
+    const blob = new Blob([toCSV(sim.rows)], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), {href:url, download:'btc_dca_report.csv'});
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  // First render
+  defaultRun();
+  </script>
+</body>
+</html>
