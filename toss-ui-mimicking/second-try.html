@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Fintech JP – Home</title>
+<style>
+  /* --- Reset & base --- */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body { background:#e9edf3; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+  /* --- Phone canvas (fixed width to match screenshot proportions) --- */
+  .phone {
+    width: 375px;                 /* iPhone base width */
+    min-height: 812px;            /* iPhone 11/12 height for layout parity */
+    margin: 0 auto;               /* center on desktop */
+    background: #f4f6f9;          /* app background */
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* --- Safe area padding to simulate notch device --- */
+  .safe { padding: 8px 12px 20px; }
+
+  /* --- Status bar --- */
+  .statusbar { height: 44px; display:flex; align-items:center; justify-content:space-between; padding: 0 8px; }
+  .time { font-weight: 700; font-size: 17px; letter-spacing: 0.2px; }
+  .sb-icons { display:flex; align-items:center; gap: 6px; }
+  .dot { width:6px; height:6px; background:#e53935; border-radius:50%; position:absolute; top:8px; right:16px; }
+
+  /* --- Top nav row (folder + title + bell) --- */
+  .topnav { height: 36px; display:flex; align-items:center; gap:8px; color:#5b667a; padding: 0 4px; }
+  .title { font-size: 18px; font-weight: 700; color:#222; letter-spacing: 0.2px; }
+  .spacer { flex:1; }
+  .icon-btn { width:28px; height:28px; display:grid; place-items:center; border-radius:8px; }
+
+  /* --- Cards --- */
+  .section { padding: 10px 0; }
+  .card { background:#fff; border-radius: 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 16px; margin: 8px 0; }
+  .card-row { display:flex; align-items:center; }
+  .card .chev { margin-left:auto; opacity:0.5; }
+  .label { font-size: 15px; color:#6b778c; letter-spacing: 0.2px; }
+  .cta { color:#1e63ff; font-weight: 800; font-size: 20px; letter-spacing: 0.2px; }
+
+  /* bank card */
+  .bank-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .bank-logo { width:28px; height:28px; border-radius:8px; background: linear-gradient(180deg,#e9f3ff,#cbe2ff); display:grid; place-items:center; }
+  .balance { font-size: 28px; font-weight: 800; letter-spacing: 0.2px; color:#1b2736; }
+  .send-btn { margin-left:auto; background:#f2f5fb; color:#1b2736; font-weight:700; padding:8px 14px; border-radius:12px; border:1px solid #e5ebf4; }
+  .bank-tabs { display:flex; gap:14px; align-items:center; margin-top:12px; color:#5f6f85; font-size:14px; }
+
+  /* list cards */
+  .pill { font-size:14px; background:#eef3ff; color:#2a63ff; padding:6px 10px; border-radius:999px; border:1px solid #d9e4ff; }
+  .amount-xl { font-size:26px; font-weight:800; color:#1b2736; }
+  .sub { font-size:14px; color:#7b8796; margin-top:6px; }
+
+  /* shortcut row */
+  .shortcut { display:flex; align-items:center; gap: 24px; padding: 6px 0; }
+  .shortcut .item { flex:1; text-align:center; }
+  .shortcut .ico { width:34px; height:34px; margin: 0 auto 8px; border-radius:10px; background:#f2f5fb; display:grid; place-items:center; border:1px solid #e6ebf3; }
+  .shortcut .txt { font-size:14px; color:#2b3442; }
+
+  /* schedule teaser */
+  .schedule { display:flex; align-items:center; gap:10px; }
+  .date { font-weight:700; color:#6b778c; }
+
+  /* --- Tabbar --- */
+  .tabbar { position: absolute; left:0; right:0; bottom:0; height:84px; background:#fff; border-top-left-radius: 16px; border-top-right-radius:16px; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); display:flex; align-items:flex-start; justify-content:space-around; padding-top:10px; }
+  .tab { width:64px; text-align:center; color:#7d8a9d; font-size:12px; }
+  .tab .ico { width:30px; height:30px; border-radius:8px; background:#f2f5fb; margin: 0 auto 6px; display:grid; place-items:center; border:1px solid #e6ebf3; }
+  .tab.active { color:#1e63ff; }
+
+  /* --- Utility icons (inline SVG sizing) --- */
+  svg { display:block; }
+  .chev svg { width:16px; height:16px; }
+  .sm { width:18px; height:18px; }
+  .md { width:20px; height:20px; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="safe">
+      <!-- Status Bar -->
+      <div class="statusbar">
+        <div class="time">9:41</div>
+        <div class="sb-icons">
+          <!-- Mock status icons -->
+          <svg class="sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18v2H3v-2zm2-2h14v-2H5v2zm2-4h10V10H7v2zm2-4h6V6H9v2z" fill="#2b3442" opacity=".35"/></svg>
+          <svg class="sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z" fill="#2b3442" opacity=".35"/></svg>
+          <svg class="sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h-1V2h-6v2H8a2 2 0 0 0-2 2v12a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V6a2 2 0 0 0-2-2z" fill="#2b3442" opacity=".35"/></svg>
+        </div>
+      </div>
+
+      <!-- Top Nav -->
+      <div class="topnav">
+        <div class="icon-btn" aria-hidden="true">
+          <svg class="md" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v10a2 2 0 0 1-2 2H3V6z" fill="#8aa1c2"/></svg>
+        </div>
+        <div class="title">ホーム</div>
+        <div class="spacer"></div>
+        <div class="icon-btn" aria-label="通知">
+          <svg class="md" viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2zm6-6V11a6 6 0 1 0-12 0v5l-2 2v1h18v-1l-2-2z" fill="#6f7e96"/></svg>
+        </div>
+      </div>
+
+      <!-- Campaign Banner Card -->
+      <div class="section">
+        <div class="card">
+          <div class="card-row">
+            <div class="icon-btn" aria-hidden="true">
+              <svg class="md" viewBox="0 0 24 24"><path d="M4 6h16v12H4z" fill="#b7e3c7"/><path d="M4 9h16" stroke="#4caf50" stroke-width="2"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="label">ようこそ。Pay還元キャンペーン</div>
+              <div class="cta">エントリーする</div>
+            </div>
+            <div class="chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#9aa6b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bank Entry Row (tappable) -->
+      <div class="section">
+        <div class="card" style="padding:14px 16px;">
+          <div class="card-row">
+            <div class="label" style="font-weight:800; color:#223041; font-size:17px;">メイン口座</div>
+            <div class="chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#9aa6b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Balance Card -->
+      <div class="section">
+        <div class="card">
+          <div class="bank-head">
+            <div class="bank-logo">
+              <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#3aa0ff"/></svg>
+            </div>
+            <div class="balance">¥3,481,536</div>
+            <button class="send-btn" aria-label="振込・送金">振込</button>
+          </div>
+          <div class="bank-tabs">
+            <div>口座一覧</div>
+            <div>振込・入出金</div>
+            <div>投資</div>
+            <div>ポイント</div>
+            <div class="chev" aria-hidden="true" style="margin-left:auto;">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#9aa6b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Spend Card -->
+      <div class="section">
+        <div class="card">
+          <div class="card-row" style="gap:10px;">
+            <div class="icon-btn" aria-hidden="true">
+              <svg class="md" viewBox="0 0 24 24"><path d="M3 4h18v4H3zM3 10h18v10H3z" fill="#9cc3ff"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="amount-xl">¥1,117,920</div>
+              <div class="sub">今月の支出</div>
+            </div>
+            <div class="pill">最新10件</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Bill Estimate -->
+      <div class="section">
+        <div class="card">
+          <div class="card-row" style="gap:10px;">
+            <div class="icon-btn" aria-hidden="true">
+              <svg class="md" viewBox="0 0 24 24"><path d="M6 2h12l2 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2h2z" fill="#b9c5ff"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="amount-xl">¥817,713</div>
+              <div class="sub">12月26日 支払予定（カード請求見込み）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Virtual Card / Security Emphasis -->
+      <div class="section">
+        <div class="card">
+          <div class="card-row">
+            <div class="icon-btn" aria-hidden="true">
+              <svg class="md" viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" fill="#a7d0ff"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="label" style="font-weight:800; color:#223041;">オンライン用バーチャルカード</div>
+              <div class="sub">ワンタップ発行・上限設定・凍結</div>
+            </div>
+            <div class="chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#9aa6b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shortcut Row -->
+      <div class="section">
+        <div class="card" style="padding:12px 14px;">
+          <div class="shortcut">
+            <div class="item">
+              <div class="ico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 11h16v9H4zM2 11l10-7 10 7" fill="#95a8c2"/></svg>
+              </div>
+              <div class="txt">ATM入出金</div>
+            </div>
+            <div class="item">
+              <div class="ico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="#2a63ff" opacity=".15"/><path d="M6 6h12v12H6z" stroke="#2a63ff" stroke-width="2" fill="none"/></svg>
+              </div>
+              <div class="txt">支払い（QR）</div>
+            </div>
+            <div class="item">
+              <div class="ico" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 7h18v10H3z" fill="#95a8c2"/><path d="M7 12h10" stroke="#6c7c93" stroke-width="2"/></svg>
+              </div>
+              <div class="txt">振込</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign / Points -->
+      <div class="section">
+        <div class="card">
+          <div class="card-row" style="gap:10px;">
+            <div class="icon-btn" aria-hidden="true">
+              <svg class="md" viewBox="0 0 24 24"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6z" fill="#ffd27a"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="label">期間限定ポイント</div>
+              <div class="amount-xl">511,200P</div>
+              <div class="sub">失効まで残り 12日・エントリーで増量</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Payments -->
+      <div class="section" style="padding-bottom:96px;">
+        <div class="card">
+          <div class="schedule">
+            <div class="label">今週の引落予定</div>
+          </div>
+          <div style="height:10px"></div>
+          <div class="schedule">
+            <div class="date">12月15日（日）</div>
+            <div style="margin-left:8px; color:#2b3442;">家賃 自動引落の準備ができました</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tabbar" role="tablist" aria-label="メインメニュー">
+      <div class="tab active" role="tab" aria-selected="true">
+        <div class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 11h16v9H4zM2 11l10-7 10 7" fill="#2a63ff" opacity=".25"/></svg></div>
+        ホーム
+      </div>
+      <div class="tab" role="tab">
+        <div class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="#95a8c2"/></svg></div>
+        特典
+      </div>
+      <div class="tab" role="tab">
+        <div class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" stroke="#2a63ff" stroke-width="2" fill="none"/></svg></div>
+        支払い
+      </div>
+      <div class="tab" role="tab">
+        <div class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#95a8c2"/></svg></div>
+        資産
+      </div>
+      <div class="tab" role="tab">
+        <div class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" fill="#95a8c2"/></svg></div>
+        もっと
+      </div>
+    </div>
+  </div>
+</body>
+</html>
